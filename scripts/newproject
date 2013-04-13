@@ -1,0 +1,110 @@
+#!/bin/bash
+
+USAGE="Usage: ./scripts/newproject [-a] packagename [-r] projectname"
+
+PACKAGE_PLACEHOLDER="PACKAGE_NAME"
+PROJECT_PLACEHOLDER="PROJECT_NAME"
+PACKAGE_NAME=""
+PROJECT_NAME=""
+OPTIND=1
+
+# I copied almost all of this from Apple's shell scripting guide
+
+while getopts ":a:r:" VALUE "$@" ; do
+	if [ "$VALUE" = "a" ]  ; then
+		PACKAGE_NAME=$OPTARG
+	fi
+
+	if [ "$VALUE" = "r" ] ; then
+		PROJECT_NAME=$OPTARG
+	fi
+	
+	if [ "$VALUE" = ":" ] ; then
+		echo $USAGE
+		exit 1
+	fi
+
+	if [ "$VALUE" = "?" ] ; then
+		echo $USAGE
+		exit 1
+	fi
+done
+
+shift `expr $OPTIND - 1`
+
+# Make sense of non-flagged args
+
+if [ -z $PACKAGE_NAME ] ; then
+	PACKAGE_NAME=$1
+elif [ -z $PROJECT_NAME ] ; then
+	PROJECT_NAME=$1
+fi
+
+if [ -z $PROJECT_NAME ] ; then
+	if [ -z $2 ] ; then
+		PROJECT_NAME=$PACKAGE_NAME
+	else
+		PROJECT_NAME=$2
+	fi
+fi
+
+if [[ -z $PACKAGE_NAME || -z $PROJECT_NAME ]] ; then
+	echo $USAGE
+	exit 1
+fi
+
+# This script should be kept in ./scripts and we want it to run from the project root.
+# I have no idea how that pwd thing works, copypasted it from SO
+cd "$(dirname "$0")"
+CURRENT_DIR=${PWD##*/}
+if [ "$CURRENT_DIR" = "scripts" ] ; then
+	cd ..
+fi
+
+printf "Your attention please, good Sir or Madam!\n"
+printf "This script will effect path names, file contents and git indexes "
+printf "within the directory:\n$PWD.\n"
+printf "***THIS IS IMPORTANT***: If the directory above is not your project's "
+printf "root folder, make sure the script is located in /path/to/project/scripts."
+printf "This script makes just too many assumptions about the structure of the"
+printf "project to be safe.\n ***ALSO*** don't run this if you've already got your"
+printf "projct going it's only designed to customize a new install.\n"
+printf "All files and directories whose names contain " 
+printf "$PACKAGE_PLACEHOLDER will contain $PACKAGE_NAME instead. All files and "
+printf "directories whose names contain $PROJECT_PLACEHOLDER will contain " 
+printf "$PROJECT_NAME instead.\n"
+printf "Files that contain the text $PACKAGE_PLACEHOLDER or $PROJECT_PLACEHOLDER "
+printf "will have those strings substituted for $PACKAGE_NAME and $PROJECT_NAME, "
+printf "respectively.\n"
+printf "All .pyc files and .sublime-workspace files will be deleted.\n"
+printf "These changes will not apply to files in the .git subdirectory.\n"
+printf "Press 'y' to continue, or any other key to abort."
+
+read -n 1 CONT
+
+if [[ "$CONT" = "y" || "$CONT" = "Y" ]] ; then
+	echo ""
+	echo "Setting up project $PROJECT_NAME for development of pacakage $PACKAGE_NAME."
+else
+	echo "Goodbye!"
+	exit 0
+fi
+
+for i in `ls -1 **/*.pyc **/*.sublime-workspace` ; do
+	rm $i # These clutter things up. They're disposable.
+done
+
+for i in `find . -name .git -prune -or -name '*'"$PACKAGE_PLACEHOLDER"'*' -print`; do
+	git mv $i `echo $i | sed 's/'"$PACKAGE_PLACEHOLDER"'/'"$PACKAGE_NAME"'/'`
+done
+
+# Rename all the files and directories with PROJECT_NAME placeholder
+for i in `find . -name .git -prune -or -name '*'"$PROJECT_PLACEHOLDER"'*' -print`; do
+	git mv $i `echo $i | sed 's/'"$PROJECT_PLACEHOLDER"'/'"$PROJECT_NAME"'/'`
+done
+
+# This should resolve stub imports
+for i in `find . -name *git -prune -or -name '*.py' -print`; do
+	sed -e 's/'"$PACKAGE_PLACEHOLDER"'/'"$PACKAGE_NAME"'/' -i '' $i
+	sed -e 's/'"$PROJECT_PLACEHOLDER"'/'"$PROJECT_NAME"'/' -i '' $i
+done

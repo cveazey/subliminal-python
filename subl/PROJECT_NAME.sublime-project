@@ -1,0 +1,18 @@
+{
+	"folders":
+	[
+		{
+			"path": "..",
+			"file_exclude_patterns": [".gitignore"],
+			"folder_exclude_patterns": ["*virtual_env", "*.egg-info"]
+		}
+	],
+	"build_systems":
+	[
+		{
+	        "name": "nosetests",
+	        "cmd": ["/bin/bash", "$project_path/subl_nosetests.sh"],
+	        "working_dir": "$project_path"
+		}
+	]
+}

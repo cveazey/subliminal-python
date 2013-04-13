@@ -1,0 +1,2 @@
+source subl_common.sh
+nosetests
